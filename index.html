@@ -1,0 +1,381 @@
+```html
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>世界科技馆导航</title>
+
+<script src="https://unpkg.com/three"></script>
+<script src="https://unpkg.com/globe.gl"></script>
+
+<style>
+
+/* 基础 */
+
+body,html{
+margin:0;
+height:100%;
+overflow:hidden;
+font-family:Arial;
+background:#000;
+}
+
+/* 左侧导航 */
+
+#sidebar{
+position:absolute;
+left:0;
+top:0;
+bottom:0;
+width:340px;
+background:#ffffff;
+border-right:2px solid #ddd;
+overflow-y:auto;
+z-index:10;
+}
+
+/* 折叠标题 */
+
+.groupTitle{
+padding:12px;
+background:#f3f3f3;
+font-weight:bold;
+cursor:pointer;
+border-bottom:1px solid #ddd;
+}
+
+/* 科技馆条目 */
+
+.item{
+padding:8px 12px;
+border-bottom:1px solid #eee;
+cursor:pointer;
+
+display:flex;
+justify-content:space-between;
+align-items:center;
+}
+
+.item:hover{
+background:#eef6ff;
+}
+
+/* 地球 */
+
+#globe{
+position:absolute;
+left:340px;
+right:0;
+top:0;
+bottom:0;
+}
+
+/* 标题 */
+
+#title{
+position:absolute;
+left:360px;
+top:15px;
+font-size:22px;
+font-weight:bold;
+background:white;
+padding:8px 14px;
+border-radius:6px;
+box-shadow:0 2px 6px rgba(0,0,0,0.2);
+z-index:20;
+}
+
+</style>
+</head>
+
+<body>
+
+<div id="sidebar">
+<div id="list"></div>
+</div>
+
+<div id="title">世界科技馆导航</div>
+
+<div id="globe"></div>
+
+<script>
+
+/* ================= 数据 ================= */
+    // 数据部分保持不变
+    const rawData = [
+        { name: "中国科学技术馆", lon: 116.4037, lat: 40.0113, url: "https://cstm.cdstm.cn/", reg: "ASIA" },
+        { name: "上海科技馆", lon: 121.5440, lat: 31.2196, url: "https://www2.sstm.org.cn/index", reg: "ASIA" },
+        { name: "广东科学中心", lon: 113.3927, lat: 23.0435, url: "http://www.gdsc.cn/", reg: "ASIA" },
+        { name: "天津科学技术馆", lon: 117.2180, lat: 39.0908, url: "http://www.tjstm/", reg: "ASIA" },
+        { name: "重庆科技馆", lon: 106.5889, lat: 29.6065, url: "http://www.cqkjg.cn/", reg: "ASIA" },
+        { name: "四川科技馆", lon: 104.0668, lat: 30.6597, url: "http://www.scstm.com/", reg: "ASIA" },
+        { name: "湖南省科学技术馆", lon: 112.9388, lat: 28.2282, url: "https://www.hnstm.org.cn/party", reg: "ASIA" },
+        { name: "湖北省科学技术馆", lon: 114.3054, lat: 30.5931, url: "https://www.hbstm.org.cn/", reg: "ASIA" },
+        { name: "山东省科技馆", lon: 117.1201, lat: 36.6512, url: "http://www.sdstm.cn/", reg: "ASIA" },
+        { name: "河南省科技馆", lon: 113.6254, lat: 34.7466, url: "http://www.hnstm.cn/", reg: "ASIA" },
+        { name: "河北省科学技术馆", lon: 114.5149, lat: 38.0428, url: "http://www.hbstm.cn/", reg: "ASIA" },
+        { name: "山西省科学技术馆", lon: 112.5492, lat: 37.8570, url: "http://www.sxstm.cn/", reg: "ASIA" },
+        { name: "陕西省科学技术馆", lon: 108.9398, lat: 34.3416, url: "http://www.sxstm.com/", reg: "ASIA" },
+        { name: "辽宁省科学技术馆", lon: 123.4315, lat: 41.8057, url: "https://www.lnkjg.cn/", reg: "ASIA" },
+        { name: "吉林省科技馆", lon: 125.3235, lat: 43.8171, url: "http://www.jlstm.cn/", reg: "ASIA" },
+        { name: "黑龙江省科学技术馆", lon: 126.6424, lat: 45.7560, url: "https://www.hljstm.org.cn/", reg: "ASIA" },
+        { name: "安徽省科学技术馆", lon: 117.2830, lat: 31.8612, url: "https://www.ahstm.org.cn/", reg: "ASIA" },
+        { name: "合肥市科技馆", lon: 117.2340, lat: 31.8200, url: "https://www.hfstm.com/", reg: "ASIA" },
+        { name: "浙江省科技馆", lon: 120.1551, lat: 30.2741, url: "https://www.zjstm.org/", reg: "ASIA" },
+        { name: "福建省科技馆", lon: 119.2965, lat: 26.0745, url: "https://www.fjkjg.com/?btwaf=26529344", reg: "ASIA" },
+        { name: "江西省科技馆", lon: 115.8582, lat: 28.6820, url: "http://www.jxstm.cn/", reg: "ASIA" },
+        { name: "广西科技馆", lon: 108.3669, lat: 22.8170, url: "http://m.gxkjg.com/", reg: "ASIA" },
+        { name: "贵州科技馆", lon: 106.7135, lat: 26.5783, url: "http://www.gzstm.cn/", reg: "ASIA" },
+        { name: "甘肃科技馆", lon: 103.8343, lat: 36.0611, url: "https://www.gsstm.org/", reg: "ASIA" },
+        { name: "日本未来馆", lon: 139.7765, lat: 35.6199, url: "https://www.miraikan.jst.go.jp/", reg: "ASIA" },
+        { name: "大阪科学馆", lon: 135.4933, lat: 34.6916, url: "https://www.sci-museum.jp/", reg: "ASIA" },
+        { name: "名古屋市科学馆", lon: 136.9066, lat: 35.1688, url: "https://www.ncsm.city.nagoya.jp/", reg: "ASIA" },
+        { name: "韩国国立果川科学馆", lon: 127.0100, lat: 37.4306, url: "https://www.sciencecenter.go.kr/", reg: "ASIA" },
+        { name: "韩国国立中央科学馆", lon: 127.3845, lat: 36.3750, url: "https://www.science.go.kr/", reg: "ASIA" },
+        { name: "釜山国立科学馆", lon: 129.2115, lat: 35.2137, url: "https://www.sciport.or.kr/", reg: "ASIA" },
+        { name: "新加坡科学中心", lon: 103.7420, lat: 1.3330, url: "https://www.science.edu.sg/", reg: "ASIA" },
+        { name: "新加坡天文馆（Omni Theatre）", lon: 103.7425, lat: 1.3336, url: "https://www.science.edu.sg/visit-us/omni-theatre", reg: "ASIA" },
+        { name: "印度国家科学中心", lon: 77.2459, lat: 28.6139, url: "https://www.nscd.gov.in/", reg: "ASIA" },
+        { name: "印度维萨卡科学中心", lon: 83.3097, lat: 17.7200, url: "https://vsc.gov.in/", reg: "ASIA" },
+        { name: "泰国国家科学博物馆", lon: 100.6173, lat: 14.0766, url: "https://www.nsm.or.th/", reg: "ASIA" },
+        { name: "马来西亚国家科学中心", lon: 101.6239, lat: 3.1478, url: "https://www.psn.gov.my/", reg: "ASIA" },
+        { name: "印尼Taman Mini科学中心", lon: 106.8950, lat: -6.3024, url: "https://tamanmini.com/", reg: "ASIA" },
+        { name: "菲律宾国家科学中心", lon: 121.0437, lat: 14.6507, url: "https://www.nast.ph/", reg: "ASIA" },
+        { name: "以色列布隆菲尔德科学博物馆", lon: 35.2024, lat: 31.7779, url: "https://mada.org.il/", reg: "ASIA" },
+        { name: "沙特阿卜杜拉科技馆", lon: 46.6753, lat: 24.7136, url: "https://www.kacst.edu.sa/", reg: "ASIA" },
+        { name: "卡塔尔科技馆", lon: 51.4903, lat: 25.2854, url: "https://www.qnl.qa/", reg: "ASIA" },
+        { name: "阿联酋未来博物馆", lon: 55.2708, lat: 25.2193, url: "https://museumofthefuture.ae/", reg: "ASIA" },
+        { name: "伦敦科学博物馆", lon: -0.1740, lat: 51.4978, url: "https://www.sciencemuseum.org.uk/", reg: "EUROPE" },
+        { name: "自然历史博物馆（伦敦）", lon: -0.1764, lat: 51.4967, url: "https://www.nhm.ac.uk/", reg: "EUROPE" },
+        { name: "德国科技博物馆", lon: 13.3767, lat: 52.4986, url: "https://technikmuseum.berlin/", reg: "EUROPE" },
+        { name: "德意志博物馆", lon: 11.5820, lat: 48.1299, url: "https://www.deutsches-museum.de/", reg: "EUROPE" },
+        { name: "瑞士交通博物馆", lon: 8.3363, lat: 47.0585, url: "https://www.verkehrshaus.ch/", reg: "EUROPE" },
+        { name: "巴黎工业技术博物馆", lon: 2.3700, lat: 48.8956, url: "https://www.cite-sciences.fr/", reg: "EUROPE" },
+        { name: "法国国家自然历史博物馆", lon: 2.3565, lat: 48.8430, url: "https://www.mnhn.fr/", reg: "EUROPE" },
+        { name: "米兰科技馆", lon: 9.1706, lat: 45.4637, url: "https://www.museoscienza.org/", reg: "EUROPE" },
+        { name: "巴塞罗那科学博物馆", lon: 2.1310, lat: 41.4125, url: "https://cosmocaixa.org/", reg: "EUROPE" },
+        { name: "马德里国家科技馆", lon: -3.6920, lat: 40.4303, url: "https://www.muncyt.es/", reg: "EUROPE" },
+        { name: "哥本哈根实验馆", lon: 12.5210, lat: 55.6945, url: "https://www.experimentarium.dk/", reg: "EUROPE" },
+        { name: "阿姆斯特丹NEMO科学博物馆", lon: 4.9120, lat: 52.3740, url: "https://www.nemosciencemuseum.nl/", reg: "EUROPE" },
+        { name: "维也纳科技博物馆", lon: 16.3193, lat: 48.2036, url: "https://www.technischesmuseum.at/", reg: "EUROPE" },
+        { name: "斯德哥尔摩科技馆", lon: 18.0897, lat: 59.3463, url: "https://www.tekniskamuseet.se/", reg: "EUROPE" },
+        { name: "赫尔辛基Heureka科学中心", lon: 25.0415, lat: 60.2942, url: "https://www.heureka.fi/", reg: "EUROPE" },
+        { name: "华沙哥白尼科学中心", lon: 21.0356, lat: 52.2418, url: "https://www.kopernik.org.pl/", reg: "EUROPE" },
+        { name: "布鲁塞尔原子球科学中心", lon: 4.3417, lat: 50.8949, url: "https://atomium.be/", reg: "EUROPE" },
+        { name: "奥斯陆科技馆", lon: 10.7400, lat: 59.9420, url: "https://www.tekniskmuseum.no/", reg: "EUROPE" },
+        { name: "格拉斯哥科学中心", lon: -4.2900, lat: 55.8580, url: "https://www.glasgowsciencecentre.org/", reg: "EUROPE" },
+        { name: "里斯本科学博物馆", lon: -9.2040, lat: 38.6970, url: "https://www.pavconhecimento.pt/", reg: "EUROPE" },
+        { name: "美国国家航空航天博物馆", lon: -77.0199, lat: 38.8882, url: "https://airandspace.si.edu/", reg: "AMERICA" },
+        { name: "美国自然历史博物馆", lon: -73.9735, lat: 40.7813, url: "https://www.amnh.org/", reg: "AMERICA" },
+        { name: "芝加哥科学与工业博物馆", lon: -87.5831, lat: 41.7906, url: "https://www.msichicago.org/", reg: "AMERICA" },
+        { name: "加州科学中心", lon: -118.2870, lat: 34.0157, url: "https://californiasciencecenter.org/", reg: "AMERICA" },
+        { name: "探索馆（旧金山）", lon: -122.3986, lat: 37.8014, url: "https://www.exploratorium.edu/", reg: "AMERICA" },
+        { name: "休斯顿自然科学博物馆", lon: -95.3885, lat: 29.7222, url: "https://www.hmns.org/", reg: "AMERICA" },
+        { name: "肯尼迪航天中心游客中心", lon: -80.6810, lat: 28.5241, url: "https://www.kennedyspacecenter.com/", reg: "AMERICA" },
+        { name: "太平洋科学中心", lon: -122.3516, lat: 47.6206, url: "https://www.pacificsciencecenter.org/", reg: "AMERICA" },
+        { name: "安大略科学中心", lon: -79.3385, lat: 43.7163, url: "https://www.ontariosciencecentre.ca/", reg: "AMERICA" },
+        { name: "蒙特利尔科学中心", lon: -73.5524, lat: 45.5045, url: "https://www.montrealsciencecentre.com/", reg: "AMERICA" },
+        { name: "TELUS世界科学馆（温哥华）", lon: -123.1033, lat: 49.2734, url: "https://www.scienceworld.ca/", reg: "AMERICA" },
+        { name: "亚利桑那科学中心", lon: -112.0672, lat: 33.4484, url: "https://www.azscience.org/", reg: "AMERICA" },
+        { name: "奥兰多科学中心", lon: -81.3792, lat: 28.5729, url: "https://www.osc.org/", reg: "AMERICA" },
+        { name: "底特律科学中心", lon: -83.0594, lat: 42.3598, url: "https://www.mi-sci.org/", reg: "AMERICA" },
+        { name: "波士顿科学博物馆", lon: -71.0710, lat: 42.3678, url: "https://www.mos.org/", reg: "AMERICA" },
+        { name: "费城富兰克林学会", lon: -75.1719, lat: 39.9582, url: "https://www.fi.edu/", reg: "AMERICA" },
+        { name: "墨西哥科技馆Universum", lon: -99.1870, lat: 19.3116, url: "https://www.universum.unam.mx/", reg: "AMERICA" },
+        { name: "巴西未来博物馆", lon: -43.1806, lat: -22.8955, url: "https://museudoamanha.org.br/", reg: "AMERICA" },
+        { name: "圣保罗卡塔文托博物馆", lon: -46.6296, lat: -23.5378, url: "https://cataventocultural.org.br/", reg: "AMERICA" },
+        { name: "圣地亚哥科学中心", lon: -70.6483, lat: -33.4569, url: "https://www.mim.cl/", reg: "AMERICA" },
+        { name: "堪培拉 Questacon 科技馆", lon: 149.1244, lat: -35.2962, url: "https://www.questacon.edu.au/", reg: "OCEANIA" },
+        { name: "悉尼动力博物馆", lon: 151.1987, lat: -33.8785, url: "https://maas.museum/powerhouse-museum/", reg: "OCEANIA" },
+        { name: "墨尔本科学馆（Scienceworks）", lon: 144.9019, lat: -37.8305, url: "https://museumsvictoria.com.au/scienceworks/", reg: "OCEANIA" },
+        { name: "布里斯班昆士兰博物馆科学中心", lon: 153.0175, lat: -27.4726, url: "https://www.qm.qld.gov.au/", reg: "OCEANIA" },
+        { name: "珀斯 Scitech 科学中心", lon: 115.8460, lat: -31.9505, url: "https://www.scitech.org.au/", reg: "OCEANIA" },
+        { name: "阿德莱德科学中心（MOD.）", lon: 138.5986, lat: -34.9213, url: "https://mod.org.au/", reg: "OCEANIA" },
+        { name: "奥克兰 MOTAT 科技交通博物馆", lon: 174.7278, lat: -36.8670, url: "https://www.motat.nz/", reg: "OCEANIA" },
+        { name: "惠灵顿 Te Papa 科学文化博物馆", lon: 174.7819, lat: -41.2905, url: "https://www.tepapa.govt.nz/", reg: "OCEANIA" },
+        { name: "基督城国际南极中心", lon: 172.5340, lat: -43.4894, url: "https://www.iceberg.co.nz/", reg: "OCEANIA" },
+        { name: "奥克兰 Stardome 天文馆", lon: 174.7615, lat: -36.9008, url: "https://www.stardome.org.nz/", reg: "OCEANIA" },
+        { name: "斐济国家博物馆科学中心", lon: 178.4419, lat: -18.1416, url: "http://www.fijimuseum.org.fj/", reg: "OCEANIA" },
+        { name: "巴布亚新几内亚国家博物馆科学馆", lon: 147.1820, lat: -9.4438, url: "https://www.pngnm.gov.pg/", reg: "OCEANIA" },
+        { name: "南非开普敦科技中心", lon: 18.4730, lat: -33.9321, url: "https://ctsc.org.za/", reg: "AFRICA" },
+        { name: "南非Sci-Bono探索中心", lon: 28.0400, lat: -26.2044, url: "https://www.scibono.org.za/", reg: "AFRICA" },
+        { name: "南非约翰内斯堡天文馆", lon: 28.0300, lat: -26.1920, url: "https://www.wits.ac.za/planetarium/", reg: "AFRICA" },
+        { name: "埃及亚历山大科学馆（Bibliotheca Alexandrina Science Center）", lon: 29.9187, lat: 31.2089, url: "https://www.bibalex.org/sciplanet/", reg: "AFRICA" },
+        { name: "埃及儿童文明与创意中心", lon: 31.3157, lat: 30.0853, url: "https://www.childmuseum.org.eg/", reg: "AFRICA" },
+        { name: "摩洛哥拉巴特科学馆", lon: -6.8326, lat: 34.0209, url: "https://fm6education.ma/", reg: "AFRICA" },
+        { name: "突尼斯科学城", lon: 10.1282, lat: 36.8091, url: "https://www.cst.rnu.tn/", reg: "AFRICA" },
+        { name: "肯尼亚内罗毕国家博物馆科学中心", lon: 36.8167, lat: -1.2762, url: "https://museums.or.ke/", reg: "AFRICA" },
+        { name: "尼日利亚国家科学技术博物馆", lon: 7.3986, lat: 9.0765, url: "https://fmst.gov.ng/", reg: "AFRICA" },
+        { name: "加纳科学技术博物馆", lon: -0.1870, lat: 5.6037, url: "https://ghanamuseums.org/", reg: "AFRICA" },
+        { name: "安哥拉国家科学中心", lon: 13.2343, lat: -8.8383, url: "https://ciencia.ao/", reg: "AFRICA" },
+        { name: "埃塞俄比亚科技博物馆", lon: 38.7636, lat: 9.0108, url: "https://www.sciencemuseum.et/", reg: "AFRICA" }
+    ];
+
+/* ================= 大洲颜色 ================= */
+
+const continentColor={
+ASIA:"#ff3b3b",
+EUROPE:"#3b82ff",
+AMERICA:"#22c55e",
+OCEANIA:"#f59e0b",
+AFRICA:"#a855f7"
+};
+
+
+/* ================= 地球 ================= */
+
+const globe = Globe()
+(document.getElementById('globe'))
+
+.globeImageUrl(
+'https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg'
+)
+
+.pointsData(rawData)
+
+.pointLat(d=>d.lat)
+.pointLng(d=>d.lon)
+
+.pointColor(d=>continentColor[d.reg])
+
+.pointAltitude(0.02)
+
+.pointRadius(0.9)
+
+.onPointClick(d=>{
+window.open(d.url,"_blank")
+});
+/* 默认视角-亚洲 */
+
+globe.pointOfView(
+{
+lat:30,
+lng:100,
+altitude:2
+},
+0
+);
+
+
+/* ================= 左侧折叠导航 ================= */
+
+const list=document.getElementById("list");
+
+const groups=["ASIA","EUROPE","AMERICA","OCEANIA","AFRICA"];
+
+groups.forEach(g=>{
+
+const title=document.createElement("div");
+title.className="groupTitle";
+title.innerText=g+" ▶";
+
+const content=document.createElement("div");
+content.style.display="none";
+
+title.onclick=()=>{
+
+content.style.display=
+content.style.display==="none"?"block":"none";
+
+};
+
+list.appendChild(title);
+list.appendChild(content);
+
+/* 生成列表 */
+
+rawData.filter(d=>d.reg===g).forEach(m=>{
+
+const item=document.createElement("div");
+item.className="item";
+
+/* 名称 */
+
+const name=document.createElement("span");
+name.innerText=m.name;
+
+/* 官网按钮 */
+
+const btn=document.createElement("button");
+btn.innerText="GO!";
+btn.style.cursor="pointer";
+
+/* 点击官网 */
+
+btn.onclick=(e)=>{
+e.stopPropagation();
+window.open(m.url,"_blank");
+};
+
+/* 点击名称飞过去 */
+
+item.onclick=()=>{
+globe.pointOfView({
+lat:m.lat,
+lng:m.lon,
+altitude:1.6
+},1500);
+};
+
+item.appendChild(name);
+item.appendChild(btn);
+item.onclick=()=>{
+
+globe.pointOfView({
+lat:m.lat,
+lng:m.lon,
+altitude:1.6
+},1500);
+
+};
+
+content.appendChild(item);
+
+});
+
+});
+/* ================= 星空背景 ================= */
+
+const scene = globe.scene();
+
+/* 星星几何体 */
+
+const starGeometry = new THREE.BufferGeometry();
+
+const starVertices = [];
+
+for(let i=0;i<2000;i++){
+
+starVertices.push(
+(Math.random()-0.5)*4000,
+(Math.random()-0.5)*4000,
+(Math.random()-0.5)*4000
+);
+
+}
+
+/* 生成星星 */
+
+starGeometry.setAttribute(
+'position',
+new THREE.Float32BufferAttribute(starVertices,3)
+);
+
+/* 星星材质 */
+
+const starMaterial = new THREE.PointsMaterial({
+color:0xffffff,
+size:1.5
+});
+
+/* 创建星空 */
+
+const stars = new THREE.Points(starGeometry,starMaterial);
+
+scene.add(stars);
+
+</script>
+
+</body>
+</html>
+```
